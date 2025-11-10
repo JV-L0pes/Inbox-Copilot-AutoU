@@ -134,12 +134,6 @@ export default function Home() {
             <HistoryTimeline items={history} onSelect={onHistorySelect} />
           </section>
         </main>
-
-        <footer id="cta" className="mt-4 text-center text-xs text-slate-500">
-          <span className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-slate-200">
-            Beta público aberto — peça acesso por aqui.
-          </span>
-        </footer>
       </div>
     </div>
   );

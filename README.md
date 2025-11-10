@@ -4,15 +4,40 @@ Aplicação full-stack para classificar emails (Produtivo/Improdutivo) e sugerir
 
 ## Arquitetura
 
-- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-4o-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`.
-- **Frontend (`frontend/`)**: Next.js App Router, Tailwind v4 e componentes client-side para upload drag-and-drop, histórico local e cards dinâmicos.
+- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-4o-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
+- **Frontend (`frontend/`)**: Next.js App Router, Tailwind v4 e componentes client-side com upload drag-and-drop, painel de inspirações, cards dinamicamente atualizados e histórico local em sessão.
 - **Deploy**: Backend preparado para Render via `render.yaml` + `backend/Dockerfile`. Frontend pronto para Vercel; basta apontar `NEXT_PUBLIC_API_URL` para o backend publicado.
+- **Docker**: Arquivos `Dockerfile.dev` (backend/frontend) e `docker-compose.yml` para ambiente local com hot reload (`uvicorn --reload` e `npm run dev`).
 
 ## Requisitos
 
 - Python 3.11 (recomendo 3.11 para compatibilidade com spaCy).
 - Node.js 20+.
 - Chave válida da OpenAI (modelo `gpt-4o-mini`, ~US$5 disponíveis cobrem os testes).
+
+## Estrutura
+
+```
+backend/
+  app/
+    main.py
+    services/...
+  data/
+  tests/
+  Dockerfile
+  Dockerfile.dev
+
+frontend/
+  src/
+    app/
+    components/
+    lib/api.ts
+  Dockerfile
+  Dockerfile.dev
+
+docker-compose.yml
+render.yaml
+```
 
 ## Backend
 
@@ -42,6 +67,8 @@ npm install
 npm run dev
 ```
 
+### Ambiente com Docker (local)
+
 Rodar lint:
 
 ```powershell
@@ -55,6 +82,18 @@ npm run lint
 2. Selecionar `render.yaml`; Render criará o serviço dockerizado automaticamente.
 3. Definir variável `OPENAI_API_KEY` no painel.
 4. Após o deploy, anotar a URL pública (ex.: `https://case-email-backend.onrender.com`).
+
+### Frontend (Docker local)
+
+```powershell
+docker compose up --build frontend
+```
+
+### Backend (Docker local)
+
+```powershell
+docker compose up --build backend
+```
 
 ### Frontend (Vercel)
 1. Importar o diretório `frontend/` pelo painel da Vercel.
@@ -75,6 +114,17 @@ Invoke-WebRequest `
 
 - `backend/data/sample_productive.txt`
 - `backend/data/sample_unproductive.txt`
+
+## Variáveis de ambiente
+
+### Backend (`backend/.env`)
+- `OPENAI_API_KEY` — chave da OpenAI (obrigatório).
+- `OPENAI_MODEL` — modelo a utilizar (`gpt-4o-mini` por padrão).
+- `OPENAI_MAX_OUTPUT_TOKENS` — limite de tokens para resposta (600 default).
+- `OPENAI_TIMEOUT_SECONDS` — timeout de chamadas (60 default).
+
+### Frontend (`frontend/.env.local`)
+- `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `http://localhost:8000` ou deploy Render).
 
 ## Vídeo demonstrativo
 
