@@ -65,6 +65,9 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
         "justification (frase explicando), highlights (lista com até 3 trechos relevantes), "
         "raw_labels (lista de rótulos auxiliares). "
         "A resposta sugerida deve alinhar com a categoria e oferecer próximo passo adequado."
+        "Sem rodeios."
+        " Mencione explicitamente o status atual e indique se existem pendências relevantes;"
+        " caso não haja, registre essa informação de forma objetiva."
     )
     user_input = (
         f"Email:\n\"\"\"\n{email_text.strip()}\n\"\"\"\n\n"
@@ -79,14 +82,8 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
 
 
 def _parse_responses_response(response: Any) -> Dict[str, Any]:
-    content = response.output_text.strip()
-    try:
-        payload: Dict[str, Any] = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Resposta inesperada da OpenAI: {content}",
-        ) from exc
+    content = response.output_text or ""
+    payload = _load_payload(content)
 
     category = payload.get("category", "Produtivo")
     if category not in (EmailCategory.productive.value, EmailCategory.unproductive.value):
@@ -109,6 +106,7 @@ def _parse_responses_response(response: Any) -> Dict[str, Any]:
             "Olá! Obrigado pela mensagem. Em breve retornarei com mais detalhes.",
         ),
         "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
+        "justification": payload.get("justification"),
         "highlights": payload.get("highlights") or None,
         "raw_labels": payload.get("raw_labels") or None,
         "usage": usage,
@@ -117,14 +115,8 @@ def _parse_responses_response(response: Any) -> Dict[str, Any]:
 
 def _parse_chat_completion(completion: Any) -> Dict[str, Any]:
     message = completion.choices[0].message
-    content = (message.content or "").strip()
-    try:
-        payload: Dict[str, Any] = json.loads(content)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Resposta inesperada da OpenAI: {content}",
-        ) from exc
+    content = message.content or ""
+    payload = _load_payload(content)
 
     category = payload.get("category", EmailCategory.productive.value)
     if category not in (EmailCategory.productive.value, EmailCategory.unproductive.value):
@@ -147,6 +139,7 @@ def _parse_chat_completion(completion: Any) -> Dict[str, Any]:
             "Olá! Obrigado pela mensagem. Em breve retornarei com mais detalhes.",
         ),
         "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
+        "justification": payload.get("justification"),
         "highlights": payload.get("highlights") or None,
         "raw_labels": payload.get("raw_labels") or None,
         "usage": usage,
@@ -200,27 +193,36 @@ def _stub_classification(email_text: str, insights: Dict[str, List[str]]) -> Ema
     }
 
     category = EmailCategory.productive
+    pending_statement = "Nenhuma pendência adicional foi identificada no momento; avisaremos se algo mudar."
     suggested = (
-        f"Olá! Recebemos a mensagem sobre “{snippet}”. Já direcionamos para a equipe e retornaremos assim que houver progresso."
+        f"Status: estamos tratando a solicitação sobre “{snippet}” neste momento."
+        f" {pending_statement}"
     )
 
     if any(term in text_lower for term in improductive_terms) and not tokens_set.intersection(productive_terms):
         category = EmailCategory.unproductive
         suggested = (
-            "Muito obrigado pela mensagem carinhosa! Ficamos felizes com o retorno e seguimos à disposição para o que precisar."
+            "Status: mensagem recebida e registrada sem necessidade de ação imediata."
+            " Não há pendências decorrentes desta interação; seguimos à disposição."
         )
+    else:
+        if tokens_set.intersection({"manual", "anexo", "relatório", "documento"}):
+            pending_statement = (
+                "Estamos revisando o material anexado e confirmaremos se há pendências complementares."
+            )
+            suggested = (
+                "Status: arquivo recebido e encaminhado para revisão."
+                f" {pending_statement}"
+            )
 
-    if tokens_set.intersection({"manual", "anexo", "relatório", "documento"}):
-        category = EmailCategory.productive
-        suggested = (
-            "Confirmo o recebimento do arquivo anexado. Vou revisar o conteúdo e lhe atualizo com os próximos passos ainda hoje."
-        )
-
-    if tokens_set.intersection({"status", "andamento", "atualização"}):
-        category = EmailCategory.productive
-        suggested = (
-            "Estamos verificando o status solicitado. Assim que o andamento for atualizado, aviso por este canal."
-        )
+        if tokens_set.intersection({"status", "andamento", "atualização"}):
+            pending_statement = (
+                "Nenhuma pendência bloqueante foi identificada; comunicaremos imediatamente caso surja."
+            )
+            suggested = (
+                "Status: atualização em andamento e retorno previsto até o fim do dia."
+                f" {pending_statement}"
+            )
 
     return EmailAnalysisResult(
         category=category,
@@ -229,6 +231,46 @@ def _stub_classification(email_text: str, insights: Dict[str, List[str]]) -> Ema
         highlights=key_phrases,
         raw_labels=["stub"],
         normalized_text=email_text.strip() or None,
+        justification="Classificação gerada localmente sem consulta à OpenAI.",
     )
+
+
+def _strip_code_fence(content: str) -> str:
+    text = content.strip()
+    if not text.startswith("```"):
+        return text
+
+    lines = text.splitlines()
+    if lines:
+        fence = lines[0]
+        if fence.startswith("```"):
+            lines = lines[1:]
+    while lines and lines[-1].startswith("```"):
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def _load_payload(raw_content: str) -> Dict[str, Any]:
+    content = _strip_code_fence(raw_content)
+    start = content.find("{")
+    end = content.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        candidate = content[start : end + 1]
+    else:
+        candidate = content
+
+    try:
+        payload = json.loads(candidate)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Resposta inesperada da OpenAI: {raw_content.strip()}",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Resposta inesperada da OpenAI: payload não é um objeto JSON.",
+        )
+    return payload
 
 

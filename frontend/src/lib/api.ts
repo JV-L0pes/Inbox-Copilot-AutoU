@@ -6,6 +6,7 @@ export interface EmailAnalysisResponse {
   category: EmailCategory;
   suggested_response: string;
   confidence: number;
+  justification?: string | null;
   highlights?: string[] | null;
   normalized_text?: string | null;
   usage?: {
