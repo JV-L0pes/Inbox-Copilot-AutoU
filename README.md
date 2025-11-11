@@ -2,11 +2,13 @@
 
 Aplicação full-stack para classificar emails (Produtivo/Improdutivo) e sugerir respostas automáticas usando FastAPI + OpenAI no backend e Next.js 16 no frontend.
 
+Pensada para o cenário do desafio: uma grande empresa financeira que recebe alto volume de emails diários e precisa automatizar a triagem entre mensagens que exigem ação imediata (Produtivo) e comunicações informais/improdutivas, entregando respostas curtas para liberar a equipe de atendimento.
+
 ## Arquitetura
 
 - **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-4o-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
 - **Frontend (`frontend/`)**: Next.js App Router, Tailwind v4 e componentes client-side com upload drag-and-drop, painel de inspirações, cards dinamicamente atualizados e histórico local em sessão.
-- **Deploy**: Backend preparado para Render via `render.yaml` + `backend/Dockerfile`. Frontend pronto para Vercel; basta apontar `NEXT_PUBLIC_API_URL` para o backend publicado.
+- **Deploy**: Backend publicado em AWS Elastic Beanstalk (Free Tier) com imagem Docker armazenada no ECR; frontend gerado estático e hospedado em AWS S3 (opcionalmente via CloudFront). Alternativamente, Render/Vercel continuam suportados.
 - **Docker**: Arquivos `Dockerfile.dev` (backend/frontend) e `docker-compose.yml` para ambiente local com hot reload (`uvicorn --reload` e `npm run dev`).
 
 ## Requisitos
@@ -36,7 +38,6 @@ frontend/
   Dockerfile.dev
 
 docker-compose.yml
-render.yaml
 ```
 
 ## Backend
@@ -84,38 +85,88 @@ npm run lint
 
 ## Deploy
 
-### Backend (Render)
-1. Conectar repositório GitHub.
-2. Selecionar `render.yaml`; Render criará o serviço dockerizado automaticamente.
-3. Definir variável `OPENAI_API_KEY` no painel.
-4. Após o deploy, anotar a URL pública (ex.: `https://case-email-backend.onrender.com`).
+### Backend (AWS Elastic Beanstalk – Free Tier)
+1. **Build + push da imagem Docker para o ECR**
+   ```powershell
+   cd backend
+   docker build -t inbox-backend:latest .
+   $ACCOUNT_ID = (aws sts get-caller-identity --query Account --output text)
+   $REGION = "us-east-1"
+   aws ecr create-repository --repository-name inbox-backend
+   aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+   docker tag inbox-backend:latest "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/inbox-backend:latest"
+   docker push "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/inbox-backend:latest"
+   ```
+2. **Gerar pacote `Dockerrun`** (usa placeholders e evita subir credenciais/template pronto):
+   ```powershell
+   cd ..\deploy\backend-eb
+   .\prepare.ps1 -AccountId $ACCOUNT_ID -Region $REGION
+   Compress-Archive -Path Dockerrun.aws.json -DestinationPath backend-eb.zip -Force
+   ```
+3. **Elastic Beanstalk (console)**  
+   - Plataforma: *Docker running on 64bit Amazon Linux 2023*.  
+   - Upload `backend-eb.zip`.  
+   - Perfis IAM: `aws-elasticbeanstalk-service-role` (service) e `aws-elasticbeanstalk-ec2-role` (instance) com política `AmazonEC2ContainerRegistryReadOnly`.  
+   - Preset: *Single instance (free tier)*.
+4. **Configurações pós-criação**  
+   - Configuration → Software → Environment properties: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_SECONDS`, `USE_OPENAI_STUB=false`.  
+   - Configuration → Load balancer → Health check path `/health`, port `8000`.
+5. **Testar**  
+   - `http://<env>.elasticbeanstalk.com/health` → `{"status":"ok"}`.  
+   - `POST /analyze` via frontend hospedado ou `Invoke-WebRequest` (exemplo abaixo).
 
-### Frontend (Docker local)
+### Frontend (AWS S3 – Static Website)
+1. **Build estático**
+   ```powershell
+   cd frontend
+   npm install
+   npm run build
+   ```
+   (o build gera a pasta `out/` graças ao `output: "export"` do `next.config.ts`).
+2. **Bucket S3**
+   - Criar bucket (ex.: `inbox-frontend-demo`) em `us-east-1`.  
+   - Properties → *Static website hosting* → Enable → `index.html` e `404.html`.
+3. **Política de acesso público**
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": "*",
+         "Action": "s3:GetObject",
+         "Resource": "arn:aws:s3:::inbox-frontend-demo/*"
+       }
+     ]
+   }
+   ```
+4. **Upload do build**
+   ```powershell
+   aws s3 sync .\out s3://inbox-frontend-demo --delete
+   ```
+5. **URL final**  
+   `http://inbox-frontend-demo.s3-website-us-east-1.amazonaws.com`.  
+   Para HTTPS e cache, crie uma distribuição CloudFront apontando para o bucket (opcional) e invalide ao publicar novas versões.
 
+### Links públicos
+- Frontend: `http://inbox-frontend-demo.s3-website-us-east-1.amazonaws.com`
+- Backend: `http://inbox-backend-env.us-east-1.elasticbeanstalk.com` (endpoints: `/health`, `POST /analyze`)
+
+### Alternativas de deploy
+- **Backend (Render)**: conectar GitHub, usar `render.yaml`, definir `OPENAI_API_KEY`.  
+- **Frontend (Vercel)**: importar `frontend/`, configurar `NEXT_PUBLIC_API_URL`, build automático.
+
+### Ambiente local com Docker
 ```powershell
-docker compose up --build frontend
+docker compose up --build
 ```
-
-### Backend (Docker local)
-
-```powershell
-docker compose up --build backend
-```
-
-> **Importante (Docker Desktop no Windows/macOS)**  
-> Se aparecer o alerta `Não foi possível adicionar o sistema de arquivos: <illegal path>`, abra o Docker Desktop e vá em **Settings → Resources → File Sharing**. Adicione a pasta ou a unidade correspondente do projeto à lista de diretórios compartilhados, aplique as mudanças e reinicie o `docker compose up`. Sem esse passo, o volume montado pelo compose não é liberado para o container.
+> Se surgir o alerta `Não foi possível adicionar o sistema de arquivos: <illegal path>`, compartilhe a unidade nas configurações do Docker Desktop (**Settings → Resources → File Sharing**) e suba novamente.
 
 ### Escalabilidade e custos
-
-- O backend roda em container Docker e pode ser publicado no AWS Elastic Beanstalk (free tier) com `eb deploy`.
-- Para habilitar autoscaling no Elastic Beanstalk, configure **Capacity -> Auto Scaling** com número mínimo/máximo de instâncias. Mantemos desligado para evitar custos automáticos.
-- Se desejar throttle gerenciado, publique o backend atrás do API Gateway com um Usage Plan (rate + quota) e aponte o frontend para essa URL.
-- Mesmo sem autoscaling habilitado, o rate limit interno impede estouros de uso e pode ser ajustado nas variáveis `RATE_LIMIT_*`.
-
-### Frontend (Vercel)
-1. Importar o diretório `frontend/` pelo painel da Vercel.
-2. Configurar `NEXT_PUBLIC_API_URL` apontando para a URL do backend.
-3. Deploy automático com `npm install && npm run build`.
+- Elastic Beanstalk roda em `t3.micro` free tier; autoscaling pode ser ligado em **Capacity** se desejar.  
+- Rate limit interno (`RATE_LIMIT_*`) protege o uso da OpenAI.  
+- Para throttle externo, posicionar API Gateway + Usage Plan.  
+- CloudFront + S3 reduzem custo de banda e oferecem HTTPS sem custo adicional.
 
 ## Teste rápido da API
 
