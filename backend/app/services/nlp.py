@@ -23,7 +23,10 @@ def get_pipeline() -> Language:
         if "lemmatizer" not in nlp.pipe_names:
             try:
                 nlp.add_pipe("lemmatizer", config={"mode": "rule"}, name="lemmatizer")
+                nlp.initialize()  # carrega lookups se disponíveis
             except Exception:
+                if "lemmatizer" in nlp.pipe_names:
+                    nlp.remove_pipe("lemmatizer")
                 pass
         return nlp  # type: ignore[return-value]
 
@@ -33,7 +36,10 @@ def preprocess(text: str) -> Dict[str, List[str]]:
     if pipeline is None:
         return _preprocess_fallback(text)
 
-    doc = pipeline(text)
+    try:
+        doc = pipeline(text)
+    except Exception:
+        return _preprocess_fallback(text)
     tokens: List[str] = []
     for token in doc:
         if token.is_stop or token.is_space or not token.text.strip():
