@@ -102,6 +102,9 @@ docker compose up --build frontend
 docker compose up --build backend
 ```
 
+> **Importante (Docker Desktop no Windows/macOS)**  
+> Se aparecer o alerta `Não foi possível adicionar o sistema de arquivos: <illegal path>`, abra o Docker Desktop e vá em **Settings → Resources → File Sharing**. Adicione a pasta ou a unidade correspondente do projeto à lista de diretórios compartilhados, aplique as mudanças e reinicie o `docker compose up`. Sem esse passo, o volume montado pelo compose não é liberado para o container.
+
 ### Escalabilidade e custos
 
 - O backend roda em container Docker e pode ser publicado no AWS Elastic Beanstalk (free tier) com `eb deploy`.
