@@ -149,8 +149,11 @@ npm run lint
    Para HTTPS e cache, crie uma distribuição CloudFront apontando para o bucket (opcional) e invalide ao publicar novas versões.
 
 ### Links públicos
-- Frontend: `http://inbox-frontend-demo.s3-website-us-east-1.amazonaws.com`
-- Backend: `http://inbox-backend-env.us-east-1.elasticbeanstalk.com` (endpoints: `/health`, `POST /analyze`)
+- Frontend (CloudFront): `https://d2efiung7co051.cloudfront.net`
+- Backend (CloudFront): `https://d221hdcnee4vgx.cloudfront.net` (`/health`, `POST /analyze`)
+- Recursos originais (fallback): S3 static site (`http://inbox-frontend-demo.s3-website-us-east-1.amazonaws.com`) e Elastic Beanstalk (`http://inbox-backend-env.us-east-1.elasticbeanstalk.com`)
+
+> Mantive os domínios padrão gerados pelo CloudFront para não incorrer em custos adicionais com Route 53 ou certificados customizados; os identificadores alfanuméricos fazem parte do endereço gratuito fornecido pela AWS.
 
 ### Alternativas de deploy
 - **Backend (Render)**: conectar GitHub, usar `render.yaml`, definir `OPENAI_API_KEY`.  
@@ -194,7 +197,7 @@ Invoke-WebRequest `
 - `RATE_LIMIT_WINDOW_SECONDS` — duração da janela em segundos (60 por padrão).
 
 ### Frontend (`frontend/.env.local`)
-- `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `http://localhost:8000` ou deploy Render).
+- `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `https://E2VICJQ2033A12.cloudfront.net`).
 
 ## Observações
 
