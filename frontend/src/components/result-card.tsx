@@ -48,7 +48,7 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
   return (
     <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/4 p-8 shadow-[0_40px_120px_-50px_rgba(30,64,175,0.8)] backdrop-blur-2xl">
       <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-br ${style.gradient} blur-3xl`}
+        className={`pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-br ${style.gradient} blur-3xl`}
       />
 
       <header className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

@@ -17,8 +17,36 @@ export interface EmailAnalysisResponse {
   raw_labels?: string[] | null;
 }
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000";
+const RAW_API_URL =
+  process.env.NEXT_PUBLIC_API_URL?.trim() ?? "http://localhost:8000";
+
+function normalizeApiUrl(rawUrl: string): string {
+  const withoutTrailingSlash = rawUrl.replace(/\/+$/, "");
+
+  if (typeof window === "undefined") {
+    return withoutTrailingSlash;
+  }
+
+  try {
+    const parsedUrl = new URL(withoutTrailingSlash, window.location.origin);
+    const isLocalhost =
+      parsedUrl.hostname === "localhost" || parsedUrl.hostname === "127.0.0.1";
+
+    if (
+      window.location.protocol === "https:" &&
+      parsedUrl.protocol === "http:" &&
+      !isLocalhost
+    ) {
+      parsedUrl.protocol = "https:";
+    }
+
+    return parsedUrl.toString().replace(/\/+$/, "");
+  } catch {
+    return withoutTrailingSlash;
+  }
+}
+
+const API_URL = normalizeApiUrl(RAW_API_URL);
 
 export interface AnalyzePayload {
   text?: string;
