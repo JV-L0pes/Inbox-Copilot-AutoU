@@ -40,11 +40,15 @@ export interface ResultCardProps {
 
 export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
   const style = categoryStyle[result.category];
+  const confidenceHint =
+    result.confidence >= 0.70
+      ? "Pronto para uso imediato"
+      : "Revise antes de enviar";
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.04] p-8 shadow-[0_40px_120px_-50px_rgba(30,64,175,0.8)] backdrop-blur-2xl">
+    <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/4 p-8 shadow-[0_40px_120px_-50px_rgba(30,64,175,0.8)] backdrop-blur-2xl">
       <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-br ${style.gradient} blur-3xl`}
+        className={`pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-br ${style.gradient} blur-3xl`}
       />
 
       <header className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -66,7 +70,7 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
             {(result.confidence * 100).toFixed(0)}%
           </span>
           <span className="text-[11px] uppercase tracking-[0.3em] text-slate-500">
-            Ajuste fino recomendado
+            {confidenceHint}
           </span>
         </div>
       </header>
@@ -99,7 +103,17 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
         </article>
 
         <aside className="flex flex-col justify-between gap-4">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-200">
+          {result.justification ? (
+            <div className="rounded-3xl border border-white/12 bg-white/5 p-5 text-sm text-slate-200">
+              <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+                <span>Justificativa</span>
+                <Lightbulb className="h-4 w-4 text-orange-300/60" />
+              </div>
+              <p className="mt-3 leading-relaxed text-slate-200/80">{result.justification}</p>
+            </div>
+          ) : null}
+
+          <div className="rounded-3xl border border-white/10 bg-white/3 p-5 text-sm text-slate-200">
             <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
               <span>Destaques</span>
               <ArrowUpRight className="h-4 w-4 text-orange-300/60" />
@@ -172,7 +186,7 @@ function MetricCard({ label, value, tone, highlight = false }: MetricCardProps) 
   if (value === undefined || value === null) return null;
   return (
     <div
-      className={`rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs uppercase tracking-[0.3em] ${tone} ${
+      className={`rounded-2xl border border-white/10 bg-white/4 p-4 text-xs uppercase tracking-[0.3em] ${tone} ${
         highlight ? "shadow-[0_20px_60px_-45px_rgba(249,115,22,0.32)]" : ""
       }`}
     >

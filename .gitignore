@@ -14,6 +14,9 @@ env/
 # Build artifacts
 dist/
 build/
+deploy/backend-eb/Dockerrun.aws.json
+deploy/backend-eb/Dockerrun.aws.zip
+deploy
 
 # Node / Next.js
 frontend/node_modules/
@@ -72,6 +75,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env
+.env.local
 
 # vercel
 .vercel
