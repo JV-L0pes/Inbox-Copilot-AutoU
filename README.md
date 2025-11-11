@@ -197,7 +197,7 @@ Invoke-WebRequest `
 - `RATE_LIMIT_WINDOW_SECONDS` — duração da janela em segundos (60 por padrão).
 
 ### Frontend (`frontend/.env.local`)
-- `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `https://E2VICJQ2033A12.cloudfront.net`).
+- `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `https://d221hdcnee4vgx.cloudfront.net`).
 
 ## Observações
 
