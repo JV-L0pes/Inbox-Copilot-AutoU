@@ -69,9 +69,16 @@ npm run dev
 
 ### Ambiente com Docker (local)
 
+Subir frontend e backend com hot reload:
+
+```powershell
+docker compose up --build
+```
+
 Rodar lint:
 
 ```powershell
+cd frontend
 npm run lint
 ```
 
@@ -94,6 +101,13 @@ docker compose up --build frontend
 ```powershell
 docker compose up --build backend
 ```
+
+### Escalabilidade e custos
+
+- O backend roda em container Docker e pode ser publicado no AWS Elastic Beanstalk (free tier) com `eb deploy`.
+- Para habilitar autoscaling no Elastic Beanstalk, configure **Capacity -> Auto Scaling** com número mínimo/máximo de instâncias. Mantemos desligado para evitar custos automáticos.
+- Se desejar throttle gerenciado, publique o backend atrás do API Gateway com um Usage Plan (rate + quota) e aponte o frontend para essa URL.
+- Mesmo sem autoscaling habilitado, o rate limit interno impede estouros de uso e pode ser ajustado nas variáveis `RATE_LIMIT_*`.
 
 ### Frontend (Vercel)
 1. Importar o diretório `frontend/` pelo painel da Vercel.
@@ -122,17 +136,19 @@ Invoke-WebRequest `
 - `OPENAI_MODEL` — modelo a utilizar (`gpt-4o-mini` por padrão).
 - `OPENAI_MAX_OUTPUT_TOKENS` — limite de tokens para resposta (600 default).
 - `OPENAI_TIMEOUT_SECONDS` — timeout de chamadas (60 default).
+- `RATE_LIMIT_REQUESTS` — número máximo de requisições por janela (60 por padrão).
+- `RATE_LIMIT_WINDOW_SECONDS` — duração da janela em segundos (60 por padrão).
 
 ### Frontend (`frontend/.env.local`)
 - `NEXT_PUBLIC_API_URL` — URL do backend (ex.: `http://localhost:8000` ou deploy Render).
-
-## Vídeo demonstrativo
-
-- Placeholder: `[adicione aqui o link público do vídeo de 3-5 minutos apresentando a solução]`
 
 ## Observações
 
 - O pipeline prioriza GPU quando disponível (dependente da infraestrutura Render).
 - Nenhum dado de email é persistido; histórico mostrado no frontend vive apenas na sessão.
 - Ao treinar/ajustar prompts, monitore métricas e interrompa caso qualquer métrica de qualidade piore, conforme diretriz do case.
+- Rate limit in-memory (padrão 60 req/min/IP) protege o uso pay-as-you-go da OpenAI; ajuste via variáveis e veja cabeçalho `Retry-After`.
+- A arquitetura está pronta para autoscaling (Elastic Beanstalk/ECS). Autoscaling não está habilitado por padrão para evitar custos inesperados, mas a containerização facilita a ativação quando for necessário.
+- Ao hospedar em provedores com cold start (ex.: Render free tier), a primeira requisição pode retornar 502/timeout. Basta aguardar alguns segundos e reenviar; depois disso, o serviço segue estável. Para informar usuários, defina `NEXT_PUBLIC_SHOW_COLD_START_HINT=true` no frontend (exibe alerta na interface).
+- Para desenvolvimento offline/sem custo, defina `USE_OPENAI_STUB=true` no backend. O pipeline retorna respostas simuladas usando heurísticas locais.
 

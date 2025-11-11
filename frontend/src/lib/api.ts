@@ -7,6 +7,7 @@ export interface EmailAnalysisResponse {
   suggested_response: string;
   confidence: number;
   highlights?: string[] | null;
+  normalized_text?: string | null;
   usage?: {
     promptTokens?: number;
     completionTokens?: number;

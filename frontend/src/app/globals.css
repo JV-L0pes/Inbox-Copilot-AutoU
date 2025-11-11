@@ -21,9 +21,7 @@
 
 body {
   min-height: 100vh;
-  background: radial-gradient(at 15% 20%, #312e81 0%, transparent 55%),
-    radial-gradient(at 85% 25%, #172554 0%, transparent 60%),
-    linear-gradient(180deg, #020617 0%, #0f172a 28%, #030712 100%);
+  background: linear-gradient(180deg, #030303 0%, #050505 45%, #010101 100%);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
@@ -35,13 +33,12 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -50vh;
+  inset: -35vh;
   z-index: -2;
-  background: conic-gradient(
-    from 45deg at 50% 50%,
-    rgba(129, 140, 248, 0.08),
-    rgba(56, 189, 248, 0.08),
-    rgba(129, 140, 248, 0.08)
+  background: radial-gradient(
+    circle at 50% 20%,
+    rgba(249, 115, 22, 0.14),
+    rgba(249, 115, 22, 0) 58%
   );
   filter: blur(120px);
 }
@@ -52,19 +49,19 @@ body::after {
   inset: 0;
   z-index: -1;
   background-image: linear-gradient(
-      rgba(148, 163, 184, 0.08) 1px,
+      rgba(255, 255, 255, 0.03) 1px,
       transparent 1px
     ),
     linear-gradient(
       90deg,
-      rgba(148, 163, 184, 0.08) 1px,
+      rgba(255, 255, 255, 0.03) 1px,
       transparent 1px
     );
-  background-size: 24px 24px;
-  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.35), transparent 75%);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.45), transparent 80%);
 }
 
 ::selection {
-  background: rgba(99, 102, 241, 0.4);
+  background: rgba(249, 115, 22, 0.35);
   color: white;
 }

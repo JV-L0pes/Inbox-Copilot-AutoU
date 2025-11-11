@@ -15,18 +15,18 @@ const categoryStyle: Record<
 > = {
   Produtivo: {
     gradient:
-      "from-emerald-500/20 via-emerald-500/5 to-transparent border-emerald-400/40",
+      "from-orange-500/15 via-orange-500/5 to-transparent border-orange-400/35",
     chip:
-      "bg-emerald-500/10 text-emerald-200 ring-1 ring-emerald-400/40 shadow-[0_18px_45px_-28px_rgba(16,185,129,0.8)]",
+      "bg-orange-500/15 text-orange-100/80 ring-1 ring-orange-400/40 shadow-[0_18px_45px_-28px_rgba(249,115,22,0.45)]",
     tone: "Foco em resolução rápida. Priorize follow-up com prazo claro.",
     descriptor: "Requer ação imediata ou resposta direcionada.",
     icon: <Send className="h-4 w-4" />,
   },
   Improdutivo: {
     gradient:
-      "from-amber-400/20 via-amber-400/5 to-transparent border-amber-300/40",
+      "from-amber-400/12 via-amber-400/4 to-transparent border-amber-300/35",
     chip:
-      "bg-amber-400/10 text-amber-200 ring-1 ring-amber-300/40 shadow-[0_18px_45px_-28px_rgba(251,191,36,0.9)]",
+      "bg-amber-400/10 text-amber-100/80 ring-1 ring-amber-300/35 shadow-[0_18px_45px_-28px_rgba(251,191,36,0.45)]",
     tone: "Gentileza funciona. Agradeça e mantenha proximidade.",
     descriptor: "Não exige ação imediata. Apenas monitore relacionamento.",
     icon: <Lightbulb className="h-4 w-4" />,
@@ -75,7 +75,7 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
         <article className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-inner">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-200/80">
+              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-orange-200/60">
                 Resposta sugerida
               </span>
               <p className="mt-2 text-xs uppercase tracking-[0.3em] text-slate-500">
@@ -85,7 +85,7 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
             {onCopyResponse && (
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-indigo-200 transition hover:bg-indigo-500/20"
+                className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-orange-200/70 transition hover:bg-orange-500/15"
                 onClick={onCopyResponse}
               >
                 <Copy className="h-3.5 w-3.5" />
@@ -102,7 +102,7 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-sm text-slate-200">
             <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
               <span>Destaques</span>
-              <ArrowUpRight className="h-4 w-4 text-indigo-300" />
+              <ArrowUpRight className="h-4 w-4 text-orange-300/60" />
             </div>
             <ul className="mt-3 space-y-2">
               {result.highlights?.length ? (
@@ -139,11 +139,11 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
               tone="text-slate-200"
               highlight
             />
-            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-4 text-xs text-indigo-100">
-              <p className="font-semibold uppercase tracking-[0.3em]">
+            <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-4 text-xs text-orange-100/75">
+              <p className="font-semibold uppercase tracking-[0.3em] text-orange-100/75">
                 Diretriz de ação
               </p>
-              <p className="mt-2 leading-relaxed text-indigo-100/80">{style.tone}</p>
+              <p className="mt-2 leading-relaxed text-orange-100/60">{style.tone}</p>
             </div>
           </div>
 
@@ -173,12 +173,12 @@ function MetricCard({ label, value, tone, highlight = false }: MetricCardProps) 
   return (
     <div
       className={`rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs uppercase tracking-[0.3em] ${tone} ${
-        highlight ? "shadow-[0_20px_60px_-45px_rgba(129,140,248,0.9)]" : ""
+        highlight ? "shadow-[0_20px_60px_-45px_rgba(249,115,22,0.32)]" : ""
       }`}
     >
       <div className="flex items-center justify-between">
         <span>{label}</span>
-        <Target className="h-3.5 w-3.5 text-indigo-300" />
+        <Target className="h-3.5 w-3.5 text-orange-300" />
       </div>
       <p className="mt-3 text-2xl font-semibold text-white">{value}</p>
     </div>

@@ -2,12 +2,12 @@
 
 export const dynamic = "force-static";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Cpu, Flame, LayoutDashboard, Zap } from "lucide-react";
 
 import { HistoryItem, HistoryTimeline } from "@/components/history-timeline";
 import { ResultCard } from "@/components/result-card";
-import { UploadZone } from "@/components/upload-zone";
+import { UploadZone, UploadZoneHandle } from "@/components/upload-zone";
 import { EmailAnalysisResponse, analyzeEmail } from "@/lib/api";
 
 export default function Home() {
@@ -15,9 +15,15 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(
+    process.env.NEXT_PUBLIC_SHOW_COLD_START_HINT === "true"
+      ? "Se esta for a primeira requisição após algum tempo, a API pode demorar alguns segundos para acordar. Se aparecer um erro 502, aguarde e tente novamente."
+      : null,
+  );
   const [result, setResult] = useState<EmailAnalysisResponse | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [lastSample, setLastSample] = useState<string | null>(null);
+  const uploadZoneRef = useRef<UploadZoneHandle | null>(null);
 
   const canAnalyze = useMemo(
     () => Boolean(emailText.trim()) || selectedFile !== null,
@@ -41,8 +47,13 @@ export default function Home() {
         file: selectedFile ?? undefined,
       });
 
-      const snippet = emailText
-        ? emailText.slice(0, 160)
+      if (payload.normalized_text) {
+        setEmailText(payload.normalized_text);
+      }
+
+      const sourceText = payload.normalized_text ?? emailText;
+      const snippet = sourceText
+        ? sourceText.slice(0, 160)
         : selectedFile?.name ?? "";
 
       const entry: HistoryItem = {
@@ -58,6 +69,11 @@ export default function Home() {
       const message =
         apiError instanceof Error ? apiError.message : "Erro desconhecido";
       setError(message);
+      if (message.includes("502")) {
+        setInfoMessage(
+          "A API estava hibernada e está iniciando agora. Aguarde alguns segundos e envie novamente.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,16 +112,18 @@ export default function Home() {
         <main className="space-y-10">
           <section id="automation" className="space-y-6">
             <UploadZone
+              ref={uploadZoneRef}
               text={emailText}
               selectedFile={selectedFile}
               onTextChange={setEmailText}
               onFileSelect={setSelectedFile}
               onSamplePick={setLastSample}
+              onAnalyze={analyze}
+              canAnalyze={canAnalyze}
               isLoading={isLoading}
             />
 
             <ActionToolbar
-              analyze={analyze}
               canAnalyze={canAnalyze}
               isLoading={isLoading}
               clear={() => {
@@ -113,6 +131,7 @@ export default function Home() {
                 setSelectedFile(null);
                 setError(null);
               }}
+              openFileDialog={() => uploadZoneRef.current?.openFileDialog()}
             />
 
             {error ? (
@@ -120,6 +139,12 @@ export default function Home() {
                 {error}
               </div>
             ) : null}
+
+          {infoMessage ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-xs text-slate-300/90 shadow-[0_25px_70px_-55px_rgba(249,115,22,0.3)]">
+              {infoMessage}
+            </div>
+          ) : null}
 
             <div id="results">
               {result ? (
@@ -147,9 +172,9 @@ function Navigation() {
     { label: "Beta público", href: "#cta" },
   ];
   return (
-    <nav className="flex items-center justify-between rounded-full border border-white/10 bg-white/[0.03] px-6 py-4 shadow-[0_25px_60px_-50px_rgba(79,70,229,0.6)] backdrop-blur-xl">
+    <nav className="flex items-center justify-between rounded-full border border-white/10 bg-white/[0.02] px-6 py-4 shadow-[0_25px_60px_-50px_rgba(249,115,22,0.25)] backdrop-blur-xl">
       <div>
-        <p className="text-xs uppercase tracking-[0.4em] text-indigo-200">
+        <p className="text-xs uppercase tracking-[0.4em] text-orange-200/70">
           Inbox Copilot
         </p>
         <p className="text-sm font-semibold text-white">
@@ -161,7 +186,7 @@ function Navigation() {
           <a
             key={link.href}
             href={link.href}
-            className="rounded-full px-4 py-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="rounded-full px-4 py-1.5 text-white/70 transition hover:bg-orange-500/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-orange-300/60"
           >
             {link.label}
           </a>
@@ -187,10 +212,10 @@ function Hero({
   isLoading,
 }: HeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.05] p-8 shadow-[0_50px_140px_-60px_rgba(59,130,246,0.7)] backdrop-blur-2xl">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.18),_transparent_65%)]" />
+    <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.04] p-8 shadow-[0_50px_140px_-60px_rgba(249,115,22,0.35)] backdrop-blur-2xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.16),_transparent_70%)]" />
       <div className="relative space-y-6">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-indigo-200">
+        <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.4em] text-orange-100/80">
           <Zap className="h-3.5 w-3.5" />
           resposta em segundos
         </span>
@@ -209,7 +234,7 @@ function Hero({
         <div className="flex flex-wrap items-center gap-4 pt-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-500 via-sky-500 to-indigo-400 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-[1.01] hover:shadow-[0_25px_60px_-35px_rgba(14,165,233,0.8)] focus:outline-none focus:ring-2 focus:ring-sky-300/90"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-orange-500 px-6 py-3 text-sm font-semibold leading-none text-white shadow-lg transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-300/60"
             onClick={onAnalyze}
             disabled={!canAnalyze || isLoading}
           >
@@ -248,7 +273,7 @@ interface ChipProps {
 
 function Chip({ icon, text }: ChipProps) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-xs text-slate-200">
+    <span className="inline-flex items-center gap-2 rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1.5 text-xs text-orange-100">
       {icon}
       {text}
     </span>
@@ -278,7 +303,7 @@ function HeroMetrics({ history }: HeroMetricsProps) {
   const unproductive = history.filter((item) => item.category === "Improdutivo").length;
 
   return (
-    <div className="flex h-full flex-col justify-between gap-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-slate-950/70 via-slate-950/40 to-indigo-950/30 p-8 text-sm text-slate-200 shadow-[0_40px_120px_-80px_rgba(15,23,42,1)] backdrop-blur-2xl">
+    <div className="flex h-full flex-col justify-between gap-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-black via-neutral-900 to-orange-900/20 p-8 text-sm text-slate-200 shadow-[0_40px_120px_-80px_rgba(249,115,22,0.3)] backdrop-blur-2xl">
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-white">Painel instantâneo</h2>
         <p className="text-sm text-slate-300/80">
@@ -297,27 +322,33 @@ function HeroMetrics({ history }: HeroMetricsProps) {
 }
 
 interface ActionToolbarProps {
-  analyze: () => void;
   canAnalyze: boolean;
   isLoading: boolean;
   clear: () => void;
+  openFileDialog: () => void;
 }
 
 function ActionToolbar({
-  analyze,
   canAnalyze,
   isLoading,
   clear,
+  openFileDialog,
 }: ActionToolbarProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_35px_120px_-70px_rgba(79,70,229,0.6)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_35px_120px_-70px_rgba(249,115,22,0.25)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
       <div className="text-xs uppercase tracking-[0.3em] text-slate-400">
-        <span>Pronto para analisar</span>
+        <span>
+          {isLoading
+            ? "Processando análise"
+            : canAnalyze
+              ? "Conteúdo pronto para revisão"
+              : "Cole um email ou selecione um arquivo"}
+        </span>
       </div>
       <div className="flex items-center gap-3">
         <button
           type="button"
-          className="rounded-full border border-white/10 px-5 py-2 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
+          className="inline-flex h-10 items-center justify-center rounded-full border border-white/10 px-4 text-sm font-semibold text-slate-200 transition hover:border-white/30 hover:text-white"
           onClick={clear}
           disabled={isLoading}
         >
@@ -325,16 +356,11 @@ function ActionToolbar({
         </button>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full bg-indigo-500/90 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          onClick={analyze}
-          disabled={!canAnalyze || isLoading}
+          className="inline-flex h-10 items-center justify-center rounded-full bg-orange-500 px-4 text-sm font-semibold leading-none text-white shadow-lg transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-300/60"
+          onClick={openFileDialog}
+          disabled={isLoading}
         >
-          {isLoading ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          ) : (
-            <Zap className="h-4 w-4" />
-          )}
-          {isLoading ? "Analisando" : "Enviar para IA"}
+          Procurar arquivo
         </button>
       </div>
     </div>
@@ -344,7 +370,7 @@ function ActionToolbar({
 function ResultPlaceholder() {
   return (
     <section className="flex min-h-[260px] flex-col items-center justify-center rounded-[32px] border border-dashed border-white/15 bg-white/[0.03] p-10 text-center text-sm text-slate-400 backdrop-blur-xl">
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-200 shadow-lg">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-200 shadow-lg">
         <Zap className="h-5 w-5" />
       </span>
       <h3 className="mt-4 text-lg font-semibold text-white">

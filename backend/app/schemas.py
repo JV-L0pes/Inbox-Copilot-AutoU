@@ -28,6 +28,7 @@ class EmailAnalysisResult(BaseModel):
     highlights: Optional[List[str]] = None
     usage: Optional[OpenAIUsage] = None
     raw_labels: Optional[List[str]] = None
+    normalized_text: Optional[str] = None
 
 
 class ErrorResponse(BaseModel):

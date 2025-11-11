@@ -1,5 +1,9 @@
 from io import BytesIO
 
+import os
+
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -17,6 +21,7 @@ def test_analyze_with_text(monkeypatch):
             suggested_response="Olá! Já estamos cuidando do seu chamado.",
             confidence=0.91,
             highlights=["support ticket"],
+                normalized_text=text,
         )
 
     monkeypatch.setattr("backend.app.services.analyzer.analyze", fake_analyze)
@@ -36,6 +41,7 @@ def test_analyze_with_file(monkeypatch):
             category=EmailCategory.unproductive,
             suggested_response="Obrigado! Guardaremos o manual.",
             confidence=0.65,
+                normalized_text=text,
         )
 
     monkeypatch.setattr("backend.app.services.analyzer.analyze", fake_analyze)
