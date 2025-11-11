@@ -17,8 +17,8 @@ export interface HistoryTimelineProps {
 export function HistoryTimeline({ items, onSelect }: HistoryTimelineProps) {
   if (items.length === 0) {
     return (
-      <aside className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-200">
+      <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-orange-200/80">
           <HistoryIcon className="h-5 w-5" />
         </div>
         <p className="mt-4 text-base font-semibold text-white">
@@ -32,7 +32,7 @@ export function HistoryTimeline({ items, onSelect }: HistoryTimelineProps) {
   }
 
   return (
-    <aside className="flex flex-col gap-5 rounded-[24px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_35px_90px_-70px_rgba(99,102,241,0.7)] backdrop-blur-xl">
+    <aside className="flex flex-col gap-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_35px_90px_-70px_rgba(249,115,22,0.22)] backdrop-blur-xl">
       <header className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">Histórico recente</h3>
         <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">
@@ -48,25 +48,25 @@ export function HistoryTimeline({ items, onSelect }: HistoryTimelineProps) {
           <button
             key={item.id}
             type="button"
-            className="group w-full rounded-2xl border border-white/10 bg-white/5 p-4 text-left transition hover:border-indigo-500/40 hover:bg-indigo-500/10"
+            className="group w-full rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:border-orange-500/30 hover:bg-orange-500/10"
             onClick={() => onSelect?.(item)}
           >
             <div className="flex items-center justify-between text-xs text-slate-400">
               <span className="inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5 text-indigo-300" />
+                <Clock className="h-3.5 w-3.5 text-orange-300/75" />
                 {item.timestamp.toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </span>
-              <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-[11px] font-medium text-indigo-200">
+              <span className="rounded-full bg-orange-500/10 px-3 py-1 text-[11px] font-medium text-orange-200/80">
                 {item.category}
               </span>
             </div>
             <p className="mt-2 line-clamp-2 text-sm text-slate-200">
               {item.snippet}
             </p>
-            <p className="mt-2 text-xs text-indigo-200/80">
+            <p className="mt-2 text-xs text-orange-200/60">
               Confiança {Math.round(item.confidence * 100)}%
             </p>
           </button>

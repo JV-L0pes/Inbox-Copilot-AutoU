@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, Form, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .schemas import EmailAnalysisResult, ErrorResponse
 from .services import analyzer, text_extractor
+from .rate_limiter import rate_limit
 
 app = FastAPI(
     title="Email AI Classifier",
@@ -32,6 +33,7 @@ def healthcheck() -> dict:
     responses={400: {"model": ErrorResponse}, 502: {"model": ErrorResponse}},
 )
 async def analyze_email(
+    _: None = Depends(rate_limit),
     text: str | None = Form(default=None, description="Texto bruto do email."),
     file: UploadFile | None = None,
 ) -> EmailAnalysisResult:
@@ -52,6 +54,7 @@ async def analyze_email(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
-    return result
+    normalized = email_text.strip() or None
+    return result.model_copy(update={"normalized_text": normalized})
 
 
