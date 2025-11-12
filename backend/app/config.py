@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(None, alias="OPENAI_API_KEY")
-    openai_model: str = Field("gpt-4o-mini", alias="OPENAI_MODEL")
+    openai_model: str = Field("gpt-5-mini", alias="OPENAI_MODEL")
     openai_base_url: Optional[str] = Field(None, alias="OPENAI_BASE_URL")
     max_output_tokens: int = Field(1000, alias="OPENAI_MAX_OUTPUT_TOKENS")
     request_timeout: int = Field(60, alias="OPENAI_TIMEOUT_SECONDS")

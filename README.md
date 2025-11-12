@@ -6,7 +6,7 @@ Pensada para o cenário do desafio: uma grande empresa financeira que recebe alt
 
 ## Arquitetura
 
-- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-4o-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
+- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-5-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
 - **Frontend (`frontend/`)**: Next.js App Router, Tailwind v4 e componentes client-side com upload drag-and-drop, painel de inspirações, cards dinamicamente atualizados e histórico local em sessão.
 - **Deploy**: Backend publicado em AWS Elastic Beanstalk (Free Tier) com imagem Docker armazenada no ECR; frontend gerado estático e hospedado em AWS S3 (opcionalmente via CloudFront). Alternativamente, Render/Vercel continuam suportados.
 - **Docker**: Arquivos `Dockerfile.dev` (backend/frontend) e `docker-compose.yml` para ambiente local com hot reload (`uvicorn --reload` e `npm run dev`).
@@ -15,7 +15,7 @@ Pensada para o cenário do desafio: uma grande empresa financeira que recebe alt
 
 - Python 3.11 (recomendo 3.11 para compatibilidade com spaCy).
 - Node.js 20+.
-- Chave válida da OpenAI (modelo `gpt-4o-mini`, ~US$5 disponíveis cobrem os testes).
+- Chave válida da OpenAI (modelo `gpt-5-mini`, ~US$5 disponíveis cobrem os testes).
 
 ## Estrutura
 
@@ -190,7 +190,7 @@ Invoke-WebRequest `
 
 ### Backend (`backend/.env`)
 - `OPENAI_API_KEY` — chave da OpenAI (obrigatório).
-- `OPENAI_MODEL` — modelo a utilizar (`gpt-4o-mini` por padrão).
+- `OPENAI_MODEL` — modelo a utilizar (`gpt-5-mini` por padrão).
 - `OPENAI_MAX_OUTPUT_TOKENS` — limite de tokens para resposta (600 default).
 - `OPENAI_TIMEOUT_SECONDS` — timeout de chamadas (60 default).
 - `RATE_LIMIT_REQUESTS` — número máximo de requisições por janela (60 por padrão).

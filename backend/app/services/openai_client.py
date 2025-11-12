@@ -31,7 +31,7 @@ def classify_and_respond(email_text: str, insights: Dict[str, List[str]]) -> Ema
                     for message in messages
                 ],
                 max_output_tokens=settings.max_output_tokens,
-                temperature=0.2,
+                temperature=0.35,
                 timeout=settings.request_timeout,
             )
             data = _parse_responses_response(response)
@@ -39,8 +39,8 @@ def classify_and_respond(email_text: str, insights: Dict[str, List[str]]) -> Ema
             completion = client.chat.completions.create(
                 model=settings.openai_model,
                 messages=messages,
-                max_tokens=settings.max_output_tokens,
-                temperature=0.2,
+                max_completion_tokens=settings.max_output_tokens,
+                temperature=0.35,
                 timeout=settings.request_timeout,
             )
             data = _parse_chat_completion(completion)
@@ -59,6 +59,9 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
     instructions = (
         "Você é um assistente que classifica emails recebidos em português ou inglês. "
         "Categorias possíveis: Produtivo (requer ação/resposta) ou Improdutivo (sem ação imediata). "
+        "Respostas devem soar humanas, calorosas e proativas: cumprimente, agradeça o contato, "
+        "reconheça o contexto, descreva status e próximos passos com prazos quando disponíveis e encerre com frase cordial. "
+        "Use linguagem acessível e positiva, evitando respostas secas ou genéricas. "
         "Retorne SEMPRE um JSON válido com os campos: "
         "category (Produtivo ou Improdutivo), confidence (0-1), "
         "suggested_response (texto curto e cordial em português), "
@@ -102,7 +105,8 @@ def _parse_responses_response(response: Any) -> Dict[str, Any]:
         "category": category,
         "suggested_response": payload.get(
             "suggested_response",
-            "Olá! Obrigado pela mensagem. Em breve retornarei com mais detalhes.",
+            "Olá! Muito obrigado por entrar em contato. Já estamos cuidando do assunto e retornaremos com novidades em breve. "
+            "Conte conosco e fique à vontade para chamar se surgir qualquer dúvida.",
         ),
         "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
         "justification": payload.get("justification"),
@@ -135,7 +139,8 @@ def _parse_chat_completion(completion: Any) -> Dict[str, Any]:
         "category": category,
         "suggested_response": payload.get(
             "suggested_response",
-            "Olá! Obrigado pela mensagem. Em breve retornarei com mais detalhes.",
+            "Olá! Muito obrigado por entrar em contato. Já estamos cuidando do assunto e retornaremos com novidades em breve. "
+            "Conte conosco e fique à vontade para chamar se surgir qualquer dúvida.",
         ),
         "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
         "justification": payload.get("justification"),
@@ -192,34 +197,37 @@ def _stub_classification(email_text: str, insights: Dict[str, List[str]]) -> Ema
     }
 
     category = EmailCategory.productive
-    pending_statement = "Nenhuma pendência adicional foi identificada no momento; avisaremos se algo mudar."
+    pending_statement = (
+        "Por ora não identificamos pendências adicionais, mas avisaremos imediatamente caso algo mude."
+    )
     suggested = (
-        f"Status: estamos tratando a solicitação sobre “{snippet}” neste momento."
+        "Olá! Obrigado por compartilhar mais detalhes."
+        f" Estamos acompanhando a solicitação sobre “{snippet}” e manteremos você atualizado."
         f" {pending_statement}"
     )
 
     if any(term in text_lower for term in improductive_terms) and not tokens_set.intersection(productive_terms):
         category = EmailCategory.unproductive
         suggested = (
-            "Status: mensagem recebida e registrada sem necessidade de ação imediata."
-            " Não há pendências decorrentes desta interação; seguimos à disposição."
+            "Olá! Obrigado pela mensagem carinhosa. Registramos seu retorno e não há nenhuma ação pendente neste momento."
+            " Permanecemos à disposição se precisar de qualquer coisa."
         )
     else:
         if tokens_set.intersection({"manual", "anexo", "relatório", "documento"}):
             pending_statement = (
-                "Estamos revisando o material anexado e confirmaremos se há pendências complementares."
+                "Nossa equipe está revisando o material anexado e informará se surgir alguma necessidade adicional."
             )
             suggested = (
-                "Status: arquivo recebido e encaminhado para revisão."
+                "Olá! Recebemos o arquivo com sucesso e já seguimos com a análise detalhada."
                 f" {pending_statement}"
             )
 
         if tokens_set.intersection({"status", "andamento", "atualização"}):
             pending_statement = (
-                "Nenhuma pendência bloqueante foi identificada; comunicaremos imediatamente caso surja."
+                "Não percebemos pendências bloqueantes; comunicaremos imediatamente caso algo apareça."
             )
             suggested = (
-                "Status: atualização em andamento e retorno previsto até o fim do dia."
+                "Olá! Seguimos avançando na atualização mencionada e enviaremos um retorno até o fim do dia."
                 f" {pending_statement}"
             )
 
