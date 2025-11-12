@@ -65,9 +65,8 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
         "justification (frase explicando), highlights (lista com até 3 trechos relevantes), "
         "raw_labels (lista de rótulos auxiliares). "
         "A resposta sugerida deve alinhar com a categoria e oferecer próximo passo adequado."
-        "Sem rodeios."
-        " Mencione explicitamente o status atual e indique se existem pendências relevantes;"
-        " caso não haja, registre essa informação de forma objetiva."
+        "Mencione explicitamente o status atual e indique se existem pendências relevantes;"
+        "Caso não haja, registre essa informação de forma objetiva."
     )
     user_input = (
         f"Email:\n\"\"\"\n{email_text.strip()}\n\"\"\"\n\n"

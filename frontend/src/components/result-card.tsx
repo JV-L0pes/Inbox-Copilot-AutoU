@@ -11,25 +11,26 @@ const categoryStyle: Record<
     tone: string;
     descriptor: string;
     icon: React.ReactNode;
+    borderColor: string;
   }
 > = {
   Produtivo: {
-    gradient:
-      "from-orange-500/15 via-orange-500/5 to-transparent border-orange-400/35",
+    gradient: "var(--gradient-productive)",
     chip:
       "bg-orange-500/15 text-orange-100/80 ring-1 ring-orange-400/40 shadow-[0_18px_45px_-28px_rgba(249,115,22,0.45)]",
     tone: "Foco em resolução rápida. Priorize follow-up com prazo claro.",
     descriptor: "Requer ação imediata ou resposta direcionada.",
     icon: <Send className="h-4 w-4" />,
+    borderColor: "var(--border-productive)",
   },
   Improdutivo: {
-    gradient:
-      "from-amber-400/12 via-amber-400/4 to-transparent border-amber-300/35",
+    gradient: "var(--gradient-improductive)",
     chip:
       "bg-amber-400/10 text-amber-100/80 ring-1 ring-amber-300/35 shadow-[0_18px_45px_-28px_rgba(251,191,36,0.45)]",
     tone: "Gentileza funciona. Agradeça e mantenha proximidade.",
     descriptor: "Não exige ação imediata. Apenas monitore relacionamento.",
     icon: <Lightbulb className="h-4 w-4" />,
+    borderColor: "var(--border-improductive)",
   },
 };
 
@@ -46,9 +47,13 @@ export function ResultCard({ result, onCopyResponse }: ResultCardProps) {
       : "Revise antes de enviar";
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] border border-white/10 bg-white/4 p-8 shadow-[0_40px_120px_-50px_rgba(30,64,175,0.8)] backdrop-blur-2xl">
+    <section
+      className="relative overflow-hidden rounded-[32px] border bg-white/4 p-8 shadow-[0_40px_120px_-50px_rgba(249,115,22,0.32)] backdrop-blur-2xl"
+      style={{ borderColor: style.borderColor }}
+    >
       <div
-        className={`pointer-events-none absolute inset-x-0 top-0 h-40 bg-linear-to-br ${style.gradient} blur-3xl`}
+        className="pointer-events-none absolute inset-x-0 top-0 h-40 blur-3xl"
+        style={{ backgroundImage: style.gradient }}
       />
 
       <header className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

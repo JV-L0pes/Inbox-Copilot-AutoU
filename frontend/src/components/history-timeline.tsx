@@ -17,7 +17,7 @@ export interface HistoryTimelineProps {
 export function HistoryTimeline({ items, onSelect }: HistoryTimelineProps) {
   if (items.length === 0) {
     return (
-      <aside className="rounded-3xl border border-white/10 bg-white/[0.03] p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
+      <aside className="rounded-3xl border border-white/10 bg-white/3 p-8 text-center text-sm text-slate-400 backdrop-blur-xl">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/25 bg-orange-500/10 text-orange-200/80">
           <HistoryIcon className="h-5 w-5" />
         </div>
@@ -32,7 +32,7 @@ export function HistoryTimeline({ items, onSelect }: HistoryTimelineProps) {
   }
 
   return (
-    <aside className="flex flex-col gap-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-5 shadow-[0_35px_90px_-70px_rgba(249,115,22,0.22)] backdrop-blur-xl">
+    <aside className="flex flex-col gap-5 rounded-[24px] border border-white/10 bg-white/3 p-5 shadow-[0_35px_90px_-70px_rgba(249,115,22,0.22)] backdrop-blur-xl">
       <header className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">Histórico recente</h3>
         <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">

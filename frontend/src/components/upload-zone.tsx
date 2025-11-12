@@ -145,7 +145,7 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(
             Aceitamos texto livre, PDFs e arquivos `.txt`. A IA analisa intenção, urgência e tom, sugerindo uma resposta pronta para enviar.
           </p>
         </div>
-        <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-200 shadow-[0_25px_60px_-45px_rgba(249,115,22,0.18)] sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/3 px-4 py-3 text-xs text-slate-200 shadow-[0_25px_60px_-45px_rgba(249,115,22,0.18)] sm:flex-row sm:items-center sm:gap-4">
           <span className="inline-flex items-center gap-2 text-orange-200/70">
             {currentStatus.icon}
             {currentStatus.label}
@@ -239,23 +239,23 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(
               </div>
 
               {selectedFile && (
-                <div className="flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm text-emerald-100">
+                <div className="selected-file-card flex items-center justify-between rounded-2xl border px-5 py-3 text-sm">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-200">
+                    <span className="selected-file-card__icon inline-flex h-9 w-9 items-center justify-center rounded-xl">
                       <FileText className="h-[18px] w-[18px]" />
                     </span>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-emerald-100">
+                      <span className="selected-file-card__name font-semibold">
                         {selectedFile.name}
                       </span>
-                      <span className="text-xs text-emerald-200/80">
+                      <span className="selected-file-card__size text-xs">
                         {(selectedFile.size / 1024).toFixed(0)} KB
                       </span>
                     </div>
                   </div>
                   <button
                     type="button"
-                    className="text-xs font-semibold text-emerald-200 transition hover:text-white"
+                    className="selected-file-card__remove text-xs font-semibold transition"
                     onClick={() => onFileSelect(null)}
                   >
                     remover
@@ -265,7 +265,7 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(
             </div>
           </div>
 
-          <aside className="space-y-3 rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_30px_80px_-50px_rgba(249,115,22,0.28)] backdrop-blur-xl xl:sticky xl:top-6">
+          <aside className="space-y-3 rounded-3xl border border-white/10 bg-white/3 p-6 shadow-[0_30px_80px_-50px_rgba(249,115,22,0.28)] backdrop-blur-xl xl:sticky xl:top-6">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-white">Inspirações</h3>
               <span className="rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-medium text-slate-300">
@@ -298,11 +298,11 @@ export const UploadZone = forwardRef<UploadZoneHandle, UploadZoneProps>(
                 </button>
               ))}
             </div>
-            <div className="rounded-2xl border border-orange-500/25 bg-orange-500/10 p-4 text-sm text-orange-100/90">
-              <p className="font-medium text-orange-100/90">
+            <div className="tip-card rounded-2xl border border-orange-500/25 bg-orange-500/10 p-4 text-sm">
+              <p className="tip-card__title font-semibold uppercase tracking-[0.2em]">
                 Dica de especialista
               </p>
-              <p className="mt-2 text-xs leading-relaxed text-orange-100/70">
+              <p className="tip-card__body mt-2 text-xs leading-relaxed">
                 Contextualize SLA, tom desejado e próximos passos para refinar a resposta sugerida automaticamente.
               </p>
             </div>

@@ -2,8 +2,8 @@
 
 export const dynamic = "force-static";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Cpu, Flame, LayoutDashboard, Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Cpu, Flame, LayoutDashboard, Moon, Sun, Zap } from "lucide-react";
 
 import { HistoryItem, HistoryTimeline } from "@/components/history-timeline";
 import { ResultCard } from "@/components/result-card";
@@ -11,6 +11,7 @@ import { UploadZone, UploadZoneHandle } from "@/components/upload-zone";
 import { EmailAnalysisResponse, analyzeEmail } from "@/lib/api";
 
 export default function Home() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [emailText, setEmailText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,10 +26,31 @@ export default function Home() {
   const [lastSample, setLastSample] = useState<string | null>(null);
   const uploadZoneRef = useRef<UploadZoneHandle | null>(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("autou-theme");
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored);
+      document.documentElement.dataset.theme = stored;
+    } else {
+      document.documentElement.dataset.theme = "dark";
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("autou-theme", theme);
+  }, [theme]);
+
   const canAnalyze = useMemo(
     () => Boolean(emailText.trim()) || selectedFile !== null,
     [emailText, selectedFile],
   );
+
+  const toggleTheme = useCallback(() => {
+    setTheme((previous) => (previous === "dark" ? "light" : "dark"));
+  }, []);
 
   const analyze = useCallback(async () => {
     if (!canAnalyze || isLoading) {
@@ -91,9 +113,9 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen scroll-smooth text-slate-50">
+    <div className="min-h-screen scroll-smooth text-slate-50 transition-colors duration-500">
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col gap-12 px-6 pb-20 pt-12 lg:px-12">
-        <Navigation />
+        <Navigation theme={theme} onToggleTheme={toggleTheme} />
 
         <header
           id="overview"
@@ -141,7 +163,7 @@ export default function Home() {
             ) : null}
 
           {infoMessage ? (
-            <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 text-xs text-slate-300/90 shadow-[0_25px_70px_-55px_rgba(249,115,22,0.3)]">
+            <div className="rounded-3xl border border-white/10 bg-white/3 p-5 text-xs text-slate-300/90 shadow-[0_25px_70px_-55px_rgba(249,115,22,0.3)]">
               {infoMessage}
             </div>
           ) : null}
@@ -164,13 +186,20 @@ export default function Home() {
   );
 }
 
-function Navigation() {
+interface NavigationProps {
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
+}
+
+function Navigation({ theme, onToggleTheme }: NavigationProps) {
   const links = [
     { label: "Visão geral", href: "#overview" },
     { label: "Automação", href: "#automation" },
     { label: "Monitoramento", href: "#history" },
     { label: "Beta público", href: "#cta" },
   ];
+  const isLight = theme === "light";
+  const toggleLabel = isLight ? "Ativar modo escuro" : "Ativar modo claro";
   return (
     <nav className="flex items-center justify-between rounded-full border border-white/10 bg-white/[0.02] px-6 py-4 shadow-[0_25px_60px_-50px_rgba(249,115,22,0.25)] backdrop-blur-xl">
       <div>
@@ -181,16 +210,32 @@ function Navigation() {
           Financial productivity
         </p>
       </div>
-      <div className="hidden items-center gap-3 text-xs font-medium text-slate-300 md:flex">
-        {links.map((link) => (
-          <a
-            key={link.href}
-            href={link.href}
-            className="rounded-full px-4 py-1.5 text-white/70 transition hover:bg-orange-500/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-orange-300/60"
-          >
-            {link.label}
-          </a>
-        ))}
+      <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-3 text-xs font-medium text-slate-300 md:flex">
+          {links.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className="rounded-full px-4 py-1.5 text-white/70 transition hover:bg-orange-500/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-orange-300/60"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.3em] transition focus:outline-none focus:ring-2 focus:ring-orange-300/60 ${
+            isLight
+              ? "border-orange-400/50 bg-orange-500/10 text-orange-700 hover:bg-orange-500/15"
+              : "border-orange-500/30 bg-orange-500/10 text-orange-200/80 hover:bg-orange-500/15"
+          }`}
+          aria-label={toggleLabel}
+          title={toggleLabel}
+        >
+          {isLight ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          {isLight ? "Escuro" : "Claro"}
+        </button>
       </div>
     </nav>
   );
@@ -303,7 +348,13 @@ function HeroMetrics({ history }: HeroMetricsProps) {
   const unproductive = history.filter((item) => item.category === "Improdutivo").length;
 
   return (
-    <div className="flex h-full flex-col justify-between gap-6 rounded-[32px] border border-white/10 bg-gradient-to-br from-black via-neutral-900 to-orange-900/20 p-8 text-sm text-slate-200 shadow-[0_40px_120px_-80px_rgba(249,115,22,0.3)] backdrop-blur-2xl">
+    <div
+      className="flex h-full flex-col justify-between gap-6 rounded-[32px] border p-8 text-sm text-slate-200 shadow-[0_40px_120px_-80px_rgba(249,115,22,0.3)] backdrop-blur-2xl"
+      style={{
+        background: "var(--panel-hero-gradient)",
+        borderColor: "var(--panel-hero-border)",
+      }}
+    >
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-white">Painel instantâneo</h2>
         <p className="text-sm text-slate-300/80">
@@ -369,7 +420,7 @@ function ActionToolbar({
 
 function ResultPlaceholder() {
   return (
-    <section className="flex min-h-[260px] flex-col items-center justify-center rounded-[32px] border border-dashed border-white/15 bg-white/[0.03] p-10 text-center text-sm text-slate-400 backdrop-blur-xl">
+    <section className="flex min-h-[260px] flex-col items-center justify-center rounded-[32px] border border-dashed border-white/15 bg-white/3 p-10 text-center text-sm text-slate-400 backdrop-blur-xl">
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-orange-500/30 bg-orange-500/10 text-orange-200 shadow-lg">
         <Zap className="h-5 w-5" />
       </span>
