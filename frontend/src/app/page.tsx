@@ -273,7 +273,7 @@ function Hero({
           equipe para o que realmente importa.
         </p>
         <div className="flex flex-wrap items-center gap-3 text-sm text-slate-200/80">
-          <Chip icon={<Cpu className="h-3.5 w-3.5" />} text="OpenAI gpt-4o-mini com otimização de custo" />
+          <Chip icon={<Cpu className="h-3.5 w-3.5" />} text="OpenAI gpt-5-mini com otimização de custo" />
           <Chip icon={<LayoutDashboard className="h-3.5 w-3.5" />} text={`Último exemplo: ${lastSample ?? "nenhum"}`} />
         </div>
         <div className="flex flex-wrap items-center gap-4 pt-2">
