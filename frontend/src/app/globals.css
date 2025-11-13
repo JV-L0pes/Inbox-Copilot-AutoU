@@ -1,3 +1,6 @@
+[data-theme="light"] body::before {
+  display: none;
+}
 @import "tailwindcss";
 
 :root {
@@ -63,57 +66,53 @@
   color-scheme: light;
   --background: #ffffff;
   --foreground: #1a130b;
-  --body-gradient: linear-gradient(180deg, #ffffff 0%, #fff7ed 42%, #ffe8cc 100%);
-  --body-glow: radial-gradient(
-    circle at 50% 20%,
-    rgba(249, 115, 22, 0.22),
-    rgba(249, 115, 22, 0) 60%
-  );
-  --body-grid-color: rgba(249, 115, 22, 0.08);
-  --surface-glass-1: rgba(255, 255, 255, 0.96);
-  --surface-glass-2: rgba(255, 255, 255, 0.92);
-  --surface-glass-3: rgba(255, 255, 255, 0.98);
-  --surface-glass-4: rgba(255, 255, 255, 0.88);
-  --surface-solid: rgba(255, 255, 255, 0.99);
-  --surface-solid-2: #fff7ed;
-  --surface-solid-3: #ffedd5;
-  --surface-chip: #fed7aa;
-  --surface-panel: rgba(255, 249, 241, 0.98);
-  --surface-panel-soft: rgba(255, 242, 226, 0.94);
-  --border-soft: rgba(234, 88, 12, 0.18);
-  --border-strong: rgba(234, 88, 12, 0.36);
-  --border-muted: rgba(234, 88, 12, 0.1);
-  --border-panel: rgba(234, 88, 12, 0.22);
-  --border-dashed: rgba(234, 88, 12, 0.32);
-  --text-primary: #1a130b;
-  --text-primary-soft: rgba(26, 19, 11, 0.78);
-  --text-secondary: rgba(63, 39, 20, 0.82);
-  --text-tertiary: rgba(107, 63, 30, 0.62);
-  --scrollbar-track: rgba(255, 248, 241, 0.92);
-  --scrollbar-thumb: rgba(249, 115, 22, 0.78);
-  --accent-base: #ea580c;
-  --accent-strong: #f97316;
-  --accent-foreground: #9a3412;
+  --body-gradient: linear-gradient(180deg, #ffffff 0%, #fefefe 45%, #fdf4ea 100%);
+  --body-glow: none;
+  --body-grid-color: rgba(249, 115, 22, 0.05);
+  --surface-glass-1: rgba(255, 255, 255, 0.98);
+  --surface-glass-2: rgba(255, 255, 255, 0.95);
+  --surface-glass-3: rgba(255, 255, 255, 0.99);
+  --surface-glass-4: rgba(255, 255, 255, 0.92);
+  --surface-solid: rgba(255, 255, 255, 1);
+  --surface-solid-2: #fffaf4;
+  --surface-solid-3: #ffefdd;
+  --surface-chip: #ffe3c7;
+  --surface-panel: rgba(255, 253, 250, 0.98);
+  --surface-panel-soft: rgba(255, 246, 233, 0.94);
+  --border-soft: rgba(240, 120, 34, 0.16);
+  --border-strong: rgba(240, 120, 34, 0.34);
+  --border-muted: rgba(240, 120, 34, 0.08);
+  --border-panel: rgba(240, 120, 34, 0.2);
+  --border-dashed: rgba(240, 120, 34, 0.28);
+  --text-primary: #1c160d;
+  --text-primary-soft: rgba(28, 22, 13, 0.76);
+  --text-secondary: rgba(70, 46, 26, 0.78);
+  --text-tertiary: rgba(112, 71, 40, 0.58);
+  --scrollbar-track: rgba(255, 250, 245, 0.94);
+  --scrollbar-thumb: rgba(240, 120, 34, 0.72);
+  --accent-base: #f97316;
+  --accent-strong: #ea580c;
+  --accent-foreground: #a94410;
   --accent-foreground-strong: #7c2d12;
-  --border-productive: rgba(234, 88, 12, 0.28);
-  --border-improductive: rgba(249, 156, 33, 0.3);
+  --border-productive: rgba(240, 120, 34, 0.24);
+  --border-improductive: rgba(250, 176, 56, 0.26);
   --panel-hero-gradient: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(255, 248, 240, 0.94) 45%,
-    rgba(255, 236, 217, 0.9) 100%
+    rgba(255, 255, 255, 0.99) 0%,
+    rgba(255, 246, 233, 0.94) 48%,
+    rgba(255, 235, 210, 0.9) 100%
   );
-  --panel-hero-border: rgba(234, 88, 12, 0.18);
+  --panel-hero-border: rgba(240, 120, 34, 0.18);
   --gradient-productive: linear-gradient(
     135deg,
-    rgba(249, 115, 22, 0.18) 0%,
-    rgba(249, 115, 22, 0.08) 38%,
+    rgba(249, 115, 22, 0.1) 0%,
+    rgba(249, 115, 22, 0.05) 40%,
     rgba(255, 255, 255, 0) 100%
   );
   --gradient-improductive: linear-gradient(
     135deg,
-    rgba(250, 204, 21, 0.16) 0%,
-    rgba(250, 204, 21, 0.06) 40%,
+    rgba(250, 204, 21, 0.1) 0%,
+    rgba(250, 204, 21, 0.04) 45%,
     rgba(255, 255, 255, 0) 100%
   );
 }
@@ -148,6 +147,10 @@ body::before {
   background: var(--body-glow);
   filter: blur(120px);
   transition: background 0.6s ease;
+}
+
+[data-theme="light"] body::before {
+  display: none;
 }
 
 body::after {
