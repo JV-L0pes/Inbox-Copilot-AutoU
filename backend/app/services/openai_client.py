@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
@@ -8,42 +9,60 @@ from fastapi import HTTPException, status
 from openai import OpenAI
 
 from ..config import Settings, get_settings
+logger = logging.getLogger(__name__)
+
 from ..schemas import EmailAnalysisResult, EmailCategory, OpenAIUsage
 
 
 def classify_and_respond(email_text: str, insights: Dict[str, List[str]]) -> EmailAnalysisResult:
     settings = get_settings()
 
-    if settings.use_openai_stub or not settings.openai_api_key:
-        return _stub_classification(email_text, insights)
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="OPENAI_API_KEY não configurada.",
+        )
 
     client = _get_client(settings.openai_api_key, settings.openai_base_url)
     messages = _build_messages(email_text, insights)
+    response_schema: Dict[str, Any] = {
+        "name": "email_classification_payload",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        EmailCategory.productive.value,
+                        EmailCategory.unproductive.value,
+                    ],
+                },
+                "confidence": {"type": "number"},
+                "suggested_response": {"type": "string"},
+                "justification": {"type": ["string", "null"]},
+                "highlights": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string"},
+                },
+                "raw_labels": {
+                    "type": ["array", "null"],
+                    "items": {"type": "string"},
+                },
+            },
+            "required": ["category", "confidence", "suggested_response", "justification", "highlights", "raw_labels"],
+            "additionalProperties": False,
+        },
+    }
     try:
-        if hasattr(client, "responses"):
-            response = client.responses.create(
-                model=settings.openai_model,
-                messages=[
-                    {
-                        "role": message["role"],
-                        "content": [{"type": "text", "text": message["content"]}],
-                    }
-                    for message in messages
-                ],
-                max_output_tokens=settings.max_output_tokens,
-                temperature=0.35,
-                timeout=settings.request_timeout,
-            )
-            data = _parse_responses_response(response)
-        else:  # Fallback para clientes antigos que só possuem chat.completions
-            completion = client.chat.completions.create(
-                model=settings.openai_model,
-                messages=messages,
-                max_completion_tokens=settings.max_output_tokens,
-                temperature=0.35,
-                timeout=settings.request_timeout,
-            )
-            data = _parse_chat_completion(completion)
+        data = _call_chat_completion_with_retry(
+            client,
+            messages,
+            response_schema=response_schema,
+            settings=settings,
+        )
+    except HTTPException:
+        raise
     except Exception as exc:  # pragma: no cover - falhas de rede/svc
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -59,9 +78,9 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
     instructions = (
         "Você é um assistente que classifica emails recebidos em português ou inglês. "
         "Categorias possíveis: Produtivo (requer ação/resposta) ou Improdutivo (sem ação imediata). "
-        "Respostas devem soar humanas, calorosas e proativas: cumprimente, agradeça o contato, "
-        "reconheça o contexto, descreva status e próximos passos com prazos quando disponíveis e encerre com frase cordial. "
-        "Use linguagem acessível e positiva, evitando respostas secas ou genéricas. "
+        "Respostas devem soar humanas, empáticas e proativas: cumprimente, agradeça o contato, descreva o que já foi feito ou será feito, cite próximos passos com prazos quando disponíveis e encerre cordialmente. "
+        "Prefira parágrafos coesos em vez de listas ou rótulos fixos (evite 'Status:', 'Próximos passos:' etc.). "
+        "Use linguagem acessível e positiva. Quando classificar como Improdutivo (apenas cordialidades), agradeça e deseje bons votos, sem falar de 'status' nem pendências."
         "Retorne SEMPRE um JSON válido com os campos: "
         "category (Produtivo ou Improdutivo), confidence (0-1), "
         "suggested_response (texto curto e cordial em português), "
@@ -83,66 +102,120 @@ def _build_messages(email_text: str, insights: Dict[str, List[str]]) -> List[Dic
     ]
 
 
-def _parse_responses_response(response: Any) -> Dict[str, Any]:
-    content = response.output_text or ""
-    payload = _load_payload(content)
+def _call_chat_completion_with_retry(
+    client: OpenAI,
+    messages: List[Dict[str, str]],
+    *,
+    response_schema: Dict[str, Any],
+    settings: Settings,
+) -> Dict[str, Any]:
+    # Tenta com valores crescentes para evitar finish_reason=length
+    base_tokens = settings.max_output_tokens or 2000
+    attempts = [
+        max(base_tokens, 2000),  # Mínimo de 2000 tokens
+        max(base_tokens * 2, 3000),  # Se ainda falhar, tenta com mais
+        max(base_tokens * 3, 4000),  # Última tentativa com ainda mais tokens
+    ]
+    last_error: Optional[Exception] = None
 
-    category = payload.get("category", "Produtivo")
-    if category not in (EmailCategory.productive.value, EmailCategory.unproductive.value):
-        category = EmailCategory.productive.value
-
-    usage = None
-    if response.usage:
-        usage = OpenAIUsage.parse_obj(
-            {
-                "promptTokens": response.usage.input_tokens,
-                "completionTokens": response.usage.output_tokens,
-                "totalTokens": response.usage.total_tokens,
-            }
-        )
-
-    return {
-        "category": category,
-        "suggested_response": payload.get(
-            "suggested_response",
-            "Olá! Muito obrigado por entrar em contato. Já estamos cuidando do assunto e retornaremos com novidades em breve. "
-            "Conte conosco e fique à vontade para chamar se surgir qualquer dúvida.",
-        ),
-        "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
-        "justification": payload.get("justification"),
-        "highlights": payload.get("highlights") or None,
-        "raw_labels": payload.get("raw_labels") or None,
-        "usage": usage,
+    response_format: Dict[str, Any] = {
+        "type": "json_schema",
+        "json_schema": response_schema,
     }
 
+    for max_tokens in attempts:
+        try:
+            completion = client.chat.completions.create(
+                model=settings.openai_model,
+                messages=messages,
+                max_completion_tokens=max_tokens,
+                timeout=settings.request_timeout,
+                response_format=response_format,
+            )
+            completion_dump = completion.model_dump()
+            if settings.debug_openai_payload:
+                _log_openai_payload(
+                    f"chat_completions_retry_{max_tokens}",
+                    completion_dump,
+                )
+            
+            # Verifica se completou corretamente
+            choices = completion_dump.get("choices") or []
+            if choices:
+                finish_reason = choices[0].get("finish_reason", "")
+                if finish_reason == "length":
+                    # Se atingiu o limite, tenta com mais tokens na próxima iteração
+                    if max_tokens == attempts[-1]:
+                        # Já tentou com o máximo, não adianta continuar
+                        raise HTTPException(
+                            status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail=f"Resposta da OpenAI atingiu limite de tokens mesmo com {max_tokens} tokens.",
+                        )
+                    continue  # Tenta próxima iteração com mais tokens
+            
+            return _parse_chat_completion(completion_dump, settings)
+        except HTTPException as exc:
+            last_error = exc
+            if exc.status_code != status.HTTP_502_BAD_GATEWAY:
+                raise
+            # Se for 502 por conteúdo vazio e ainda tiver tentativas, continua
+            if "conteúdo vazio" in str(exc.detail) or "finish_reason=length" in str(exc.detail):
+                if max_tokens != attempts[-1]:
+                    continue
+        except Exception as exc:
+            last_error = exc
 
-def _parse_chat_completion(completion: Any) -> Dict[str, Any]:
-    message = completion.choices[0].message
-    content = message.content or ""
+    if last_error:
+        raise last_error
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail="Falha desconhecida ao processar chat completion.",
+    )
+
+
+def _parse_chat_completion(completion_dump: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
+    choices = completion_dump.get("choices") or []
+    if not choices:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Resposta da OpenAI veio sem choices.",
+        )
+    message = choices[0].get("message") or {}
+    content = message.get("content") or ""
+    
+    if not content or not content.strip():
+        finish_reason = choices[0].get("finish_reason", "unknown")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Resposta inesperada da OpenAI: conteúdo vazio (finish_reason={finish_reason})",
+        )
+    
     payload = _load_payload(content)
 
-    category = payload.get("category", EmailCategory.productive.value)
+    _ensure_required_fields(payload, completion_dump, settings, source="chat_completions")
+
+    category = payload["category"]
     if category not in (EmailCategory.productive.value, EmailCategory.unproductive.value):
-        category = EmailCategory.productive.value
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Categoria inválida retornada pela OpenAI: {category}",
+        )
 
     usage = None
-    if completion.usage:
+    usage_dump = completion_dump.get("usage")
+    if usage_dump:
         usage = OpenAIUsage.parse_obj(
             {
-                "promptTokens": completion.usage.prompt_tokens,
-                "completionTokens": completion.usage.completion_tokens,
-                "totalTokens": completion.usage.total_tokens,
+                "promptTokens": usage_dump.get("prompt_tokens"),
+                "completionTokens": usage_dump.get("completion_tokens"),
+                "totalTokens": usage_dump.get("total_tokens"),
             }
         )
 
     return {
         "category": category,
-        "suggested_response": payload.get(
-            "suggested_response",
-            "Olá! Muito obrigado por entrar em contato. Já estamos cuidando do assunto e retornaremos com novidades em breve. "
-            "Conte conosco e fique à vontade para chamar se surgir qualquer dúvida.",
-        ),
-        "confidence": min(max(payload.get("confidence", 0.6), 0.0), 1.0),
+        "suggested_response": payload["suggested_response"],
+        "confidence": _normalize_confidence(payload["confidence"]),
         "justification": payload.get("justification"),
         "highlights": payload.get("highlights") or None,
         "raw_labels": payload.get("raw_labels") or None,
@@ -156,90 +229,6 @@ def _get_client(api_key: str, base_url: Optional[str]) -> OpenAI:
     if base_url:
         client_kwargs["base_url"] = base_url
     return OpenAI(**client_kwargs)
-
-
-def _stub_classification(email_text: str, insights: Dict[str, List[str]]) -> EmailAnalysisResult:
-    tokens = insights.get("tokens", [])
-    key_phrases = insights.get("key_phrases", [])[:3] or None
-
-    text_lower = email_text.lower()
-    tokens_set = set(tokens)
-    snippet = (
-        email_text.strip().splitlines()[0][:120]
-        if email_text.strip()
-        else "sua solicitação"
-    )
-
-    productive_terms = {
-        "ticket",
-        "suporte",
-        "acesso",
-        "erro",
-        "status",
-        "pendência",
-        "cliente",
-        "prazo",
-        "login",
-        "senha",
-        "chamado",
-        "bloqueado",
-    }
-    improductive_terms = {
-        "obrigado",
-        "obrigada",
-        "parabéns",
-        "feliz",
-        "agradeço",
-        "grato",
-        "agradecimentos",
-        "elogio",
-        "abraço",
-    }
-
-    category = EmailCategory.productive
-    pending_statement = (
-        "Por ora não identificamos pendências adicionais, mas avisaremos imediatamente caso algo mude."
-    )
-    suggested = (
-        "Olá! Obrigado por compartilhar mais detalhes."
-        f" Estamos acompanhando a solicitação sobre “{snippet}” e manteremos você atualizado."
-        f" {pending_statement}"
-    )
-
-    if any(term in text_lower for term in improductive_terms) and not tokens_set.intersection(productive_terms):
-        category = EmailCategory.unproductive
-        suggested = (
-            "Olá! Obrigado pela mensagem carinhosa. Registramos seu retorno e não há nenhuma ação pendente neste momento."
-            " Permanecemos à disposição se precisar de qualquer coisa."
-        )
-    else:
-        if tokens_set.intersection({"manual", "anexo", "relatório", "documento"}):
-            pending_statement = (
-                "Nossa equipe está revisando o material anexado e informará se surgir alguma necessidade adicional."
-            )
-            suggested = (
-                "Olá! Recebemos o arquivo com sucesso e já seguimos com a análise detalhada."
-                f" {pending_statement}"
-            )
-
-        if tokens_set.intersection({"status", "andamento", "atualização"}):
-            pending_statement = (
-                "Não percebemos pendências bloqueantes; comunicaremos imediatamente caso algo apareça."
-            )
-            suggested = (
-                "Olá! Seguimos avançando na atualização mencionada e enviaremos um retorno até o fim do dia."
-                f" {pending_statement}"
-            )
-
-    return EmailAnalysisResult(
-        category=category,
-        suggested_response=suggested,
-        confidence=0.5,
-        highlights=key_phrases,
-        raw_labels=["stub"],
-        normalized_text=email_text.strip() or None,
-        justification="Classificação gerada localmente sem consulta à OpenAI.",
-    )
 
 
 def _strip_code_fence(content: str) -> str:
@@ -257,6 +246,76 @@ def _strip_code_fence(content: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _looks_like_payload(candidate: Dict[str, Any]) -> bool:
+    required = {"category", "confidence", "suggested_response"}
+    if not required.issubset(candidate.keys()):
+        return False
+    if not isinstance(candidate.get("category"), str):
+        return False
+    if not isinstance(candidate.get("confidence"), (int, float)):
+        return False
+    if not isinstance(candidate.get("suggested_response"), str):
+        return False
+    return required.issubset(candidate.keys())
+
+
+def _log_openai_payload(source: str, payload: Any) -> None:
+    try:
+        logger.info("OpenAI %s payload: %s", source, _safe_dump(payload))
+    except Exception:  # pragma: no cover - logging não deve falhar
+        logger.exception("Falha ao registrar payload OpenAI (%s)", source)
+
+
+def _safe_dump(obj: Any) -> str:
+    try:
+        if hasattr(obj, "model_dump_json"):
+            return obj.model_dump_json()
+        if hasattr(obj, "model_dump"):
+            return json.dumps(obj.model_dump(), ensure_ascii=False)
+        if isinstance(obj, dict):
+            return json.dumps(obj, ensure_ascii=False)
+        return repr(obj)
+    except Exception:  # pragma: no cover
+        return repr(obj)
+
+
+def _ensure_required_fields(
+    payload: Dict[str, Any],
+    raw_response: Any,
+    settings: Settings,
+    *,
+    source: str,
+) -> None:
+    required = ("category", "confidence", "suggested_response")
+    missing = [field for field in required if field not in payload]
+    if missing:
+        if settings.debug_openai_payload:
+            logger.error(
+                "Payload sem campos obrigatórios (%s): faltando %s | dump: %s",
+                source,
+                ", ".join(missing),
+                _safe_dump(raw_response),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Resposta da OpenAI sem campos obrigatórios: {', '.join(missing)}",
+        )
+    if not isinstance(payload["suggested_response"], str) or not payload["suggested_response"].strip():
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Resposta da OpenAI trouxe suggested_response vazio ou inválido.",
+        )
+
+
+def _normalize_confidence(value: Any) -> float:
+    if not isinstance(value, (int, float)):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Resposta da OpenAI trouxe confidence inválido.",
+        )
+    return max(0.0, min(float(value), 1.0))
+
+
 def _load_payload(raw_content: str) -> Dict[str, Any]:
     content = _strip_code_fence(raw_content)
     start = content.find("{")
@@ -264,7 +323,10 @@ def _load_payload(raw_content: str) -> Dict[str, Any]:
     if start != -1 and end != -1 and end > start:
         candidate = content[start : end + 1]
     else:
-        candidate = content
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Resposta inesperada da OpenAI: {raw_content.strip()}",
+        )
 
     try:
         payload = json.loads(candidate)

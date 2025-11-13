@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     request_timeout: int = Field(60, alias="OPENAI_TIMEOUT_SECONDS")
     rate_limit_requests: int = Field(60, alias="RATE_LIMIT_REQUESTS")
     rate_limit_window_seconds: int = Field(60, alias="RATE_LIMIT_WINDOW_SECONDS")
-    use_openai_stub: bool = Field(False, alias="USE_OPENAI_STUB")
+    debug_openai_payload: bool = Field(False, alias="OPENAI_DEBUG_PAYLOAD")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile.dev
     env_file:
       - ./backend/.env
+    environment:
+      - OPENAI_DEBUG_PAYLOAD=true
     volumes:
       - ./backend:/app
     ports:

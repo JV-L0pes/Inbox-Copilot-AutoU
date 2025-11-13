@@ -6,7 +6,7 @@ Pensada para o cenário do desafio: uma grande empresa financeira que recebe alt
 
 ## Arquitetura
 
-- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Responses API (`gpt-5-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
+- **Backend (`backend/`)**: FastAPI, pré-processamento com spaCy (fallback próprio quando o pacote não estiver disponível) e chamada ao Chat Completions API da OpenAI com JSON Schema structured outputs (`gpt-5-mini`). Endpoint principal `POST /analyze` aceita texto ou upload `.txt/.pdf`, extraindo conteúdo de PDFs com PyPDF2.
 - **Frontend (`frontend/`)**: Next.js App Router, Tailwind v4 e componentes client-side com upload drag-and-drop, painel de inspirações, cards dinamicamente atualizados e histórico local em sessão.
 - **Deploy**: Backend publicado em AWS Elastic Beanstalk (Free Tier) com imagem Docker armazenada no ECR; frontend gerado estático e hospedado em AWS S3 (opcionalmente via CloudFront). Alternativamente, Render/Vercel continuam suportados.
 - **Docker**: Arquivos `Dockerfile.dev` (backend/frontend) e `docker-compose.yml` para ambiente local com hot reload (`uvicorn --reload` e `npm run dev`).
@@ -109,7 +109,7 @@ npm run lint
    - Perfis IAM: `aws-elasticbeanstalk-service-role` (service) e `aws-elasticbeanstalk-ec2-role` (instance) com política `AmazonEC2ContainerRegistryReadOnly`.  
    - Preset: *Single instance (free tier)*.
 4. **Configurações pós-criação**  
-   - Configuration → Software → Environment properties: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_SECONDS`, `USE_OPENAI_STUB=false`.  
+   - Configuration → Software → Environment properties: `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_MAX_OUTPUT_TOKENS`, `OPENAI_TIMEOUT_SECONDS`, `OPENAI_DEBUG_PAYLOAD=false`.  
    - Configuration → Load balancer → Health check path `/health`, port `8000`.
 5. **Testar**  
    - `http://<env>.elasticbeanstalk.com/health` → `{"status":"ok"}`.  
@@ -191,7 +191,7 @@ Invoke-WebRequest `
 ### Backend (`backend/.env`)
 - `OPENAI_API_KEY` — chave da OpenAI (obrigatório).
 - `OPENAI_MODEL` — modelo a utilizar (`gpt-5-mini` por padrão).
-- `OPENAI_MAX_OUTPUT_TOKENS` — limite de tokens para resposta (600 default).
+- `OPENAI_MAX_OUTPUT_TOKENS` — limite de tokens para resposta (1000 default). O sistema tenta automaticamente com valores maiores (2000, 3000, 4000) se necessário para evitar respostas incompletas.
 - `OPENAI_TIMEOUT_SECONDS` — timeout de chamadas (60 default).
 - `RATE_LIMIT_REQUESTS` — número máximo de requisições por janela (60 por padrão).
 - `RATE_LIMIT_WINDOW_SECONDS` — duração da janela em segundos (60 por padrão).
@@ -207,5 +207,7 @@ Invoke-WebRequest `
 - Rate limit in-memory (padrão 60 req/min/IP) protege o uso pay-as-you-go da OpenAI; ajuste via variáveis e veja cabeçalho `Retry-After`.
 - A arquitetura está pronta para autoscaling (Elastic Beanstalk/ECS). Autoscaling não está habilitado por padrão para evitar custos inesperados, mas a containerização facilita a ativação quando for necessário.
 - Ao hospedar em provedores com cold start (ex.: Render free tier), a primeira requisição pode retornar 502/timeout. Basta aguardar alguns segundos e reenviar; depois disso, o serviço segue estável. Para informar usuários, defina `NEXT_PUBLIC_SHOW_COLD_START_HINT=true` no frontend (exibe alerta na interface).
-- Para desenvolvimento offline/sem custo, defina `USE_OPENAI_STUB=true` no backend. O pipeline retorna respostas simuladas usando heurísticas locais.
+- Quando precisar inspecionar as respostas da API, habilite `OPENAI_DEBUG_PAYLOAD=true`. O backend continuará funcionando normalmente com o flag desativado.
+- O sistema usa **JSON Schema structured outputs** com `strict: True` para garantir que todas as respostas sigam o formato esperado. Todas as respostas vêm diretamente da OpenAI, sem stubs ou fallbacks.
+- O sistema implementa retry automático com limites de tokens crescentes (2000, 3000, 4000) para evitar respostas incompletas quando o modelo atinge o limite (`finish_reason=length`).
 
