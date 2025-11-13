@@ -185,6 +185,8 @@ Invoke-WebRequest `
 
 - `backend/data/sample_productive.txt`
 - `backend/data/sample_unproductive.txt`
+- `backend/data/email_produtivo.pdf`
+- `backend/data/email_improdutivo.pdf`
 
 ## Variáveis de ambiente
 
