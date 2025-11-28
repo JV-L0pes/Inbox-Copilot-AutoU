@@ -1,4 +1,4 @@
-# Inbox Copilot AutoU
+# Inbox Copilot
 
 Aplicação full-stack para classificar emails (Produtivo/Improdutivo) e sugerir respostas automáticas usando FastAPI + OpenAI no backend e Next.js 16 no frontend.
 
